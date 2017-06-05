@@ -26,6 +26,7 @@ from layer_utils.anchor_target_layer import anchor_target_layer
 from layer_utils.proposal_layer import proposal_layer
 from layer_utils.proposal_target_layer import proposal_target_layer
 from layer_utils.snippets import generate_anchors_pre
+from layer_utils.wrapper import assign_boxes
 from model.config import cfg
 
 _networks_map = {
@@ -345,16 +346,20 @@ class Pyramid(Network):
                     else cfg[cfg_key].RPN_POST_NMS_TOP_N
     _, top_indices = tf.nn.top_k(tf.reshape(all_roi_scores, [-1]), k=nms_top_n)
     p_roi = tf.gather(p_roi, top_indices)
-    for p in pyramid:
-      p_rows = tf.where(tf.equal(p_roi[:, 0], float(p)))
-      pyramid_rois = tf.reshape(tf.gather(p_roi, p_rows)[:, :, 1:], shape=[-1, 5])
+    
+    [assigned_rois, _, _] = \
+                assign_boxes(all_rois, [all_rois, top_indices], [2, 3, 4, 5], 'assign_boxes')
+
+    for p in range(5, 1, -1):
+      splitted_rois = assigned_rois[p-2]
+
       # rcnn 
       if cfg.POOLING_MODE == 'crop':
-        pool5_i = self._crop_pool_layer(pyramid[p], pyramid_rois, "pool5", p)
-        self._predictions[p]['pool5'] = pool5_i
+        cropped_roi = self._crop_pool_layer(pyramid[p], splitted_rois, "cropped_roi", p) 
+        self._predictions[p]['cropped_roi'] = cropped_roi
       else:
         raise NotImplementedError
-    cropped_rois = [self._predictions[p_layer]['pool5'] for p_layer in self._predictions]
+    cropped_rois = [self._predictions[p_layer]['cropped_roi'] for p_layer in self._predictions]
     cropped_rois = tf.concat(values=cropped_rois, axis=0)
 
 
