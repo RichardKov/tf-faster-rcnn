@@ -186,15 +186,16 @@ class Pyramid(Network):
   def build_pyramid(self, endpoints, bilinear=True):
     pyramid = {}
     pyramid_map = _networks_map['resnet50']
-    pyramid[5] = slim.conv2d(endpoints[pyramid_map['C5']], 256, [1, 1], stride=1, scope = 'C5')
-    for c in range(4, 1, -1):
-      s, s_ = pyramid[c+1], endpoints[pyramid_map['C%d'%c]]
-      up_shape = tf.shape(s_)
-      s = tf.image.resize_bilinear(s, [up_shape[1], up_shape[2]], name='C%d/upscale'%c)
-      s_ = slim.conv2d(s_, 256, [1,1], stride=1, scope='C%d'%c)
-      s = tf.add(s, s_, name='C%d/addition'%c)
-      s = slim.conv2d(s, 256, [3,3], stride=1, scope='C%d/fusion'%c)
-      pyramid[c] = s     
+    with tf.name_scope('pyramid'):
+      pyramid[5] = slim.conv2d(endpoints[pyramid_map['c5']], 256, [1, 1], stride=1, scope = 'c5')
+      for c in range(4, 1, -1):
+        s, s_ = pyramid[c+1], endpoints[pyramid_map['c%d'%c]]
+        up_shape = tf.shape(s_)
+        s = tf.image.resize_bilinear(s, [up_shape[1], up_shape[2]], name='c%d/upscale'%c)
+        s_ = slim.conv2d(s_, 256, [1,1], stride=1, scope='c%d'%c)
+        s = tf.add(s, s_, name='c%d/addition'%c)
+        s = slim.conv2d(s, 256, [3,3], stride=1, scope='c%d/fusion'%c)
+        pyramid[c] = s     
     return pyramid
 
   def build_network(self, sess, is_training=True):
