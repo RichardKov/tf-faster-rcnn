@@ -18,6 +18,7 @@ import time, os, sys
 import tensorflow as tf
 from nets.vgg16 import vgg16
 from nets.resnet_v1 import resnetv1
+from nets.pyramid import Pyramid
 
 def parse_args():
   """
@@ -60,10 +61,10 @@ if __name__ == '__main__':
   print('Called with args:')
   print(args)
 
-  if args.cfg_file is not None:
-    cfg_from_file(args.cfg_file)
   if args.set_cfgs is not None:
     cfg_from_list(args.set_cfgs)
+  if args.cfg_file is not None:
+    cfg_from_file(args.cfg_file)
 
   print('Using config:')
   pprint.pprint(cfg)
@@ -96,6 +97,8 @@ if __name__ == '__main__':
     net = resnetv1(batch_size=1, num_layers=101)
   elif args.net == 'res152':
     net = resnetv1(batch_size=1, num_layers=152)
+  elif args.net == 'pyramid':
+    net = Pyramid(batch_size=1, num_layers=50)
   else:
     raise NotImplementedError
 
